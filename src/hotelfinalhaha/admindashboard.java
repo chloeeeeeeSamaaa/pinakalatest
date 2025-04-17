@@ -7,6 +7,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.event.MouseEvent;
 import javax.swing.JPanel;
 import java.sql.ResultSetMetaData;
 import java.sql.Connection;
@@ -61,7 +62,7 @@ Connection con;
         jTable1.setFocusable(false);
         jTable1.setRowSelectionAllowed(true);
         jTable1.setColumnSelectionAllowed(false);
-
+    loadDashboardStats();
     }
   private void styleTableHeader() {
     // Style the header for jTable2
@@ -197,33 +198,90 @@ public void Load_room() {
         Logger.getLogger(admindashboard.class.getName()).log(Level.SEVERE, null, ex);
     }
 }
+public void loadDashboardStats() {
+    try {
+        // Total Reservations
+        String totalReservationsQuery = "SELECT COUNT(*) FROM reservations";
+        pat = con.prepareStatement(totalReservationsQuery);
+        ResultSet rs = pat.executeQuery();
+        if (rs.next()) {
+            lblTotalReservations.setText(String.valueOf(rs.getInt(1)));
+        }
+
+        // Total Rooms
+        String totalRoomsQuery = "SELECT COUNT(*) FROM rooms";
+        pat = con.prepareStatement(totalRoomsQuery);
+        rs = pat.executeQuery();
+        if (rs.next()) {
+            lblTotalRooms.setText(String.valueOf(rs.getInt(1)));
+        }
+
+        // Total Clients
+        String totalClientsQuery = "SELECT COUNT(*) FROM users";
+        pat = con.prepareStatement(totalClientsQuery);
+        rs = pat.executeQuery();
+        if (rs.next()) {
+            lblTotalClients.setText(String.valueOf(rs.getInt(1)));
+        }
+
+        // Total Income (sum of all paid reservationdetails)
+        String totalIncomeQuery = "SELECT SUM(amount) FROM reservationdetails rd " +
+                                  "JOIN reservations r ON rd.reservationID = r.reservationID " +
+                                  "WHERE r.status = 'Approved'";
+        pat = con.prepareStatement(totalIncomeQuery);
+        rs = pat.executeQuery();
+        if (rs.next()) {
+            double totalIncome = rs.getDouble(1);
+            lblTotalIncome.setText("₱" + String.format("%.2f", totalIncome));
+        }
+
+    } catch (SQLException ex) {
+        Logger.getLogger(admindashboard.class.getName()).log(Level.SEVERE, null, ex);
+        JOptionPane.showMessageDialog(this, "Error loading dashboard stats: " + ex.getMessage());
+    }
+}
+
 public void Load_reservation() {
     try {
-        // Use a parameterized query to prevent SQL injection
-        String query = "SELECT r.reservationID, r.reservationNo, r.userID, r.checkIn, r.checkOut, r.status,r.roomTypeID, rd.amount "
-                     + "FROM reservations r "
-                     + "JOIN reservationdetails rd ON r.reservationID = rd.reservationID"; // Join with reservationdetails
+        // 1. Move past reservations to history
+        String moveToHistoryQuery = "INSERT INTO reservation_history (reservationID, reservationNo, userID, checkIn, checkOut, status, roomTypeID, amount) " +
+            "SELECT r.reservationID, r.reservationNo, r.userID, r.checkIn, r.checkOut, r.status, r.roomTypeID, rd.amount " +
+            "FROM reservations r " +
+            "JOIN reservationdetails rd ON r.reservationID = rd.reservationID " +
+            "WHERE r.checkOut < CURDATE()";
+        
+        pat = con.prepareStatement(moveToHistoryQuery);
+        pat.executeUpdate();
+
+        // 2. Delete moved reservations from current table
+        String deleteOldQuery = "DELETE FROM reservations WHERE checkOut < CURDATE()";
+        pat = con.prepareStatement(deleteOldQuery);
+        pat.executeUpdate();
+
+        // 3. Now load active reservations
+        String query = "SELECT r.reservationID, r.reservationNo, r.userID, r.checkIn, r.checkOut, r.status, r.roomTypeID, rt.type AS roomType, rd.amount " +
+                       "FROM reservations r " +
+                       "JOIN reservationdetails rd ON r.reservationID = rd.reservationID " +
+                       "JOIN roomtypes rt ON r.roomTypeID = rt.roomTypeID";  // Join with roomtypes to get the type
 
         pat = con.prepareStatement(query);
         ResultSet rs = pat.executeQuery();
 
-        // Get table model and clear existing rows
+        // Clear table first
         d = (DefaultTableModel) jTable1.getModel();
-        d.setRowCount(0); // Clear previous data
+        d.setRowCount(0);
 
         while (rs.next()) {
-            // Create a new row with values for the current reservation
             Vector<String> v2 = new Vector<>();
-            
-            v2.add(rs.getString("reservationID"));          
+            v2.add(rs.getString("reservationID"));
             v2.add(rs.getString("reservationNo"));
             v2.add(rs.getString("userID"));
             v2.add(rs.getString("checkIn"));
             v2.add(rs.getString("checkOut"));
             v2.add(rs.getString("status"));
-             v2.add(rs.getString("roomTypeID"));// Ensure the status is displayed correctly
-            v2.add(rs.getString("amount"));  // Add the amount from reservationdetails
-            // Add the row to the table model
+            v2.add(rs.getString("roomType"));
+            v2.add(rs.getString("roomTypeID")); // Room type now accessed correctly from roomtypes table
+            v2.add(rs.getString("amount"));
             d.addRow(v2);
         }
     } catch (SQLException ex) {
@@ -231,6 +289,7 @@ public void Load_reservation() {
         JOptionPane.showMessageDialog(null, "Error loading reservations: " + ex.getMessage());
     }
 }
+
 
 
     /**
@@ -259,16 +318,16 @@ public void Load_reservation() {
         jPanel3 = new javax.swing.JPanel();
         kGradientPanel5 = new com.k33ptoo.components.KGradientPanel();
         jLabel3 = new javax.swing.JLabel();
-        jLabel8 = new javax.swing.JLabel();
+        lblTotalReservations = new javax.swing.JLabel();
         kGradientPanel8 = new com.k33ptoo.components.KGradientPanel();
         jLabel4 = new javax.swing.JLabel();
-        jLabel9 = new javax.swing.JLabel();
+        lblTotalRooms = new javax.swing.JLabel();
         kGradientPanel9 = new com.k33ptoo.components.KGradientPanel();
         jLabel5 = new javax.swing.JLabel();
-        jLabel10 = new javax.swing.JLabel();
+        lblTotalClients = new javax.swing.JLabel();
         kGradientPanel10 = new com.k33ptoo.components.KGradientPanel();
         jLabel6 = new javax.swing.JLabel();
-        jLabel7 = new javax.swing.JLabel();
+        lblTotalIncome = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
         jTextField2 = new javax.swing.JTextField();
@@ -404,7 +463,7 @@ public void Load_reservation() {
             k3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(k3Layout.createSequentialGroup()
                 .addGap(26, 26, 26)
-                .addGroup(k3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(k3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel11)
                     .addComponent(jLabel19))
                 .addContainerGap(28, Short.MAX_VALUE))
@@ -483,27 +542,27 @@ public void Load_reservation() {
 
         kGradientPanel5.setBackground(new java.awt.Color(255, 255, 255));
         kGradientPanel5.setkBorderRadius(30);
+        kGradientPanel5.setkEndColor(new java.awt.Color(37, 117, 252));
+        kGradientPanel5.setkGradientFocus(300);
+        kGradientPanel5.setkStartColor(new java.awt.Color(106, 17, 203));
 
         jLabel3.setFont(new java.awt.Font("Tahoma", 0, 15)); // NOI18N
         jLabel3.setForeground(new java.awt.Color(255, 255, 255));
         jLabel3.setText("Reservation");
 
-        jLabel8.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
-        jLabel8.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel8.setText("10");
+        lblTotalReservations.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
+        lblTotalReservations.setForeground(new java.awt.Color(255, 255, 255));
+        lblTotalReservations.setText(".");
 
         javax.swing.GroupLayout kGradientPanel5Layout = new javax.swing.GroupLayout(kGradientPanel5);
         kGradientPanel5.setLayout(kGradientPanel5Layout);
         kGradientPanel5Layout.setHorizontalGroup(
             kGradientPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(kGradientPanel5Layout.createSequentialGroup()
-                .addGroup(kGradientPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(kGradientPanel5Layout.createSequentialGroup()
-                        .addGap(59, 59, 59)
-                        .addComponent(jLabel3))
-                    .addGroup(kGradientPanel5Layout.createSequentialGroup()
-                        .addGap(76, 76, 76)
-                        .addComponent(jLabel8)))
+                .addGap(59, 59, 59)
+                .addGroup(kGradientPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(lblTotalReservations, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap(80, Short.MAX_VALUE))
         );
         kGradientPanel5Layout.setVerticalGroup(
@@ -512,7 +571,7 @@ public void Load_reservation() {
                 .addContainerGap()
                 .addComponent(jLabel3)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jLabel8)
+                .addComponent(lblTotalReservations)
                 .addContainerGap(23, Short.MAX_VALUE))
         );
 
@@ -521,14 +580,17 @@ public void Load_reservation() {
 
         kGradientPanel8.setBackground(new java.awt.Color(255, 255, 255));
         kGradientPanel8.setkBorderRadius(30);
+        kGradientPanel8.setkEndColor(new java.awt.Color(56, 239, 125));
+        kGradientPanel8.setkGradientFocus(300);
+        kGradientPanel8.setkStartColor(new java.awt.Color(17, 153, 142));
 
         jLabel4.setFont(new java.awt.Font("Tahoma", 0, 15)); // NOI18N
         jLabel4.setForeground(new java.awt.Color(255, 255, 255));
         jLabel4.setText("Rooms");
 
-        jLabel9.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
-        jLabel9.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel9.setText("10");
+        lblTotalRooms.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
+        lblTotalRooms.setForeground(new java.awt.Color(255, 255, 255));
+        lblTotalRooms.setText(".");
 
         javax.swing.GroupLayout kGradientPanel8Layout = new javax.swing.GroupLayout(kGradientPanel8);
         kGradientPanel8.setLayout(kGradientPanel8Layout);
@@ -538,10 +600,8 @@ public void Load_reservation() {
                 .addGap(76, 76, 76)
                 .addGroup(kGradientPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel4)
-                    .addGroup(kGradientPanel8Layout.createSequentialGroup()
-                        .addGap(6, 6, 6)
-                        .addComponent(jLabel9)))
-                .addContainerGap(94, Short.MAX_VALUE))
+                    .addComponent(lblTotalRooms, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(58, Short.MAX_VALUE))
         );
         kGradientPanel8Layout.setVerticalGroup(
             kGradientPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -549,7 +609,7 @@ public void Load_reservation() {
                 .addContainerGap()
                 .addComponent(jLabel4)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jLabel9)
+                .addComponent(lblTotalRooms)
                 .addContainerGap(22, Short.MAX_VALUE))
         );
 
@@ -558,14 +618,17 @@ public void Load_reservation() {
 
         kGradientPanel9.setBackground(new java.awt.Color(255, 255, 255));
         kGradientPanel9.setkBorderRadius(30);
+        kGradientPanel9.setkEndColor(new java.awt.Color(110, 72, 170));
+        kGradientPanel9.setkGradientFocus(300);
+        kGradientPanel9.setkStartColor(new java.awt.Color(157, 80, 187));
 
         jLabel5.setFont(new java.awt.Font("Tahoma", 0, 15)); // NOI18N
         jLabel5.setForeground(new java.awt.Color(255, 255, 255));
         jLabel5.setText("Clients");
 
-        jLabel10.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
-        jLabel10.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel10.setText("10");
+        lblTotalClients.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
+        lblTotalClients.setForeground(new java.awt.Color(255, 255, 255));
+        lblTotalClients.setText(".");
 
         javax.swing.GroupLayout kGradientPanel9Layout = new javax.swing.GroupLayout(kGradientPanel9);
         kGradientPanel9.setLayout(kGradientPanel9Layout);
@@ -574,11 +637,9 @@ public void Load_reservation() {
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, kGradientPanel9Layout.createSequentialGroup()
                 .addContainerGap(88, Short.MAX_VALUE)
                 .addGroup(kGradientPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(kGradientPanel9Layout.createSequentialGroup()
-                        .addGap(6, 6, 6)
-                        .addComponent(jLabel10))
+                    .addComponent(lblTotalClients, javax.swing.GroupLayout.PREFERRED_SIZE, 65, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel5))
-                .addGap(86, 86, 86))
+                .addGap(62, 62, 62))
         );
         kGradientPanel9Layout.setVerticalGroup(
             kGradientPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -586,7 +647,7 @@ public void Load_reservation() {
                 .addContainerGap()
                 .addComponent(jLabel5)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jLabel10)
+                .addComponent(lblTotalClients)
                 .addContainerGap(22, Short.MAX_VALUE))
         );
 
@@ -595,28 +656,28 @@ public void Load_reservation() {
 
         kGradientPanel10.setBackground(new java.awt.Color(255, 255, 255));
         kGradientPanel10.setkBorderRadius(30);
+        kGradientPanel10.setkEndColor(new java.awt.Color(255, 210, 0));
+        kGradientPanel10.setkGradientFocus(300);
+        kGradientPanel10.setkStartColor(new java.awt.Color(247, 151, 30));
 
         jLabel6.setFont(new java.awt.Font("Tahoma", 0, 15)); // NOI18N
         jLabel6.setForeground(new java.awt.Color(255, 255, 255));
         jLabel6.setText("Total Income");
 
-        jLabel7.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
-        jLabel7.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel7.setText("10");
+        lblTotalIncome.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
+        lblTotalIncome.setForeground(new java.awt.Color(255, 255, 255));
+        lblTotalIncome.setText(".");
 
         javax.swing.GroupLayout kGradientPanel10Layout = new javax.swing.GroupLayout(kGradientPanel10);
         kGradientPanel10.setLayout(kGradientPanel10Layout);
         kGradientPanel10Layout.setHorizontalGroup(
             kGradientPanel10Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(kGradientPanel10Layout.createSequentialGroup()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, kGradientPanel10Layout.createSequentialGroup()
                 .addContainerGap(64, Short.MAX_VALUE)
                 .addGroup(kGradientPanel10Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, kGradientPanel10Layout.createSequentialGroup()
-                        .addComponent(jLabel6)
-                        .addGap(63, 63, 63))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, kGradientPanel10Layout.createSequentialGroup()
-                        .addComponent(jLabel7)
-                        .addGap(88, 88, 88))))
+                    .addComponent(lblTotalIncome, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel6))
+                .addGap(51, 51, 51))
         );
         kGradientPanel10Layout.setVerticalGroup(
             kGradientPanel10Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -624,7 +685,7 @@ public void Load_reservation() {
                 .addContainerGap()
                 .addComponent(jLabel6)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jLabel7)
+                .addComponent(lblTotalIncome)
                 .addContainerGap(22, Short.MAX_VALUE))
         );
 
@@ -635,17 +696,17 @@ public void Load_reservation() {
 
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null}
+                {null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null}
             },
             new String [] {
-                "ReservationID", "ReserveNo", "UserID", "CheckIn", "CheckOut", "Status", "RoomTypeID", "Amount"
+                "ReservationID", "ReserveNo", "UserID", "CheckIn", "CheckOut", "Status", "Type", "RoomTypeID", "Amount"
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.Integer.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.Integer.class, java.lang.String.class
+                java.lang.Integer.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.Integer.class, java.lang.String.class
             };
 
             public Class getColumnClass(int columnIndex) {
@@ -1058,6 +1119,7 @@ public void Load_reservation() {
         JOptionPane.showMessageDialog(this, "ROOM ADDED");
         displayLatestRoom();
         Load_room();
+        loadDashboardStats();
         jComboBox1.setSelectedIndex(-1);
         jComboBox2.setSelectedIndex(-1);
         jTextField1.setText("");
@@ -1294,20 +1356,27 @@ private int lastSelectedRow = -1;
 
     private void jTable1MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTable1MouseClicked
          // TODO add your handling code here:
-        
-            int row = jTable1.getSelectedRow();
-    if (row >= 0) {
-        // Get data from table
-        String checkIn = jTable1.getValueAt(row, 3).toString();
-        String checkOut = jTable1.getValueAt(row, 4).toString();
-        String status = jTable1.getValueAt(row, 5).toString();
-        String amount = jTable1.getValueAt(row, 7).toString();
+      int row = jTable1.rowAtPoint(evt.getPoint());
 
-        // Open dialog and pass the data
-        ReserveDialog dialog = new ReserveDialog(this, true);
-        dialog.setDetails(checkIn, checkOut, status, amount);
-        dialog.setLocationRelativeTo(this); // Center the dialog
-        dialog.setVisible(true);
+    // Double-click to open dialog
+    if (evt.getClickCount() == 2 && evt.getButton() == MouseEvent.BUTTON1) {
+        if (row >= 0) {
+            String reserveID =jTable1.getValueAt(row, 0).toString();
+            String checkIn = jTable1.getValueAt(row, 3).toString();
+            String checkOut = jTable1.getValueAt(row, 4).toString();
+            String status = jTable1.getValueAt(row, 5).toString();
+            String amount = jTable1.getValueAt(row, 8).toString();
+
+            ReserveDialog dialog = new ReserveDialog(this, true);
+            dialog.setDetails(reserveID, checkIn, checkOut, status, amount);
+            dialog.setLocationRelativeTo(this);
+            dialog.setVisible(true);
+        }
+    }
+
+    // Right-click to deselect the row (unclick)
+    if (evt.getButton() == MouseEvent.BUTTON3) { // Right-click
+        jTable1.clearSelection();
     }
     }//GEN-LAST:event_jTable1MouseClicked
 
@@ -1351,7 +1420,6 @@ private int lastSelectedRow = -1;
     private javax.swing.JComboBox<String> jComboBox1;
     private javax.swing.JComboBox<String> jComboBox2;
     private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
     private javax.swing.JLabel jLabel12;
     private javax.swing.JLabel jLabel13;
@@ -1368,9 +1436,6 @@ private int lastSelectedRow = -1;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
-    private javax.swing.JLabel jLabel7;
-    private javax.swing.JLabel jLabel8;
-    private javax.swing.JLabel jLabel9;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
@@ -1399,6 +1464,10 @@ private int lastSelectedRow = -1;
     private com.k33ptoo.components.KGradientPanel kGradientPanel5;
     private com.k33ptoo.components.KGradientPanel kGradientPanel8;
     private com.k33ptoo.components.KGradientPanel kGradientPanel9;
+    private javax.swing.JLabel lblTotalClients;
+    private javax.swing.JLabel lblTotalIncome;
+    private javax.swing.JLabel lblTotalReservations;
+    private javax.swing.JLabel lblTotalRooms;
     // End of variables declaration//GEN-END:variables
 
     private static class Drag {

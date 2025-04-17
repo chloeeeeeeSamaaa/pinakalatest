@@ -3,30 +3,82 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JDialog.java to edit this template
  */
 package hotelfinalhaha;
+import com.toedter.calendar.JDateChooser;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import javax.swing.table.DefaultTableModel;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;import com.toedter.calendar.JDateChooser;
+import hotelfinalhaha.admindashboard;
+import java.awt.Window;
+import javax.swing.SwingUtilities;
+
 /**
  *
  * @author Admin
  */
 public class ReserveDialog extends javax.swing.JDialog {
+  private JDateChooser jDateChooserCheckIn;  // Declare JDateChooser for check-in
+    private JDateChooser jDateChooserCheckOut; // Declare JDateChooser for check-out
+ private admindashboard admindashboard;
 
-    /**
-     * Creates new form ReserveDialog
-     */
+   
+   
+    Connection con;
+    PreparedStatement pat;
+    DefaultTableModel d;
     public ReserveDialog(java.awt.Frame parent, boolean modal) {
         super(parent, modal);
         initComponents();
-        
+        con = connector.Connect();
+        loadRoomTypes();
+        jDateChooserCheckIn = new com.toedter.calendar.JDateChooser();
+jDateChooserCheckOut = new com.toedter.calendar.JDateChooser();
+
     }
-public void setDetails(String in, String out, String status, String amount) {
+   private void loadRoomTypes() {
+    try {
+        // SQL query to fetch roomTypeID from roomtypes
+        String query = "SELECT roomTypeID FROM roomtypes";
+        pat = con.prepareStatement(query);
+        ResultSet rs = pat.executeQuery();
+
+        // Clear any existing items in the ComboBox
+        roomTypeComboBox.removeAllItems();
+
+        // Add a default "Select Room Type" option
+        roomTypeComboBox.addItem("Select Room Type");
+
+        // Loop through the result set and add each roomTypeID to the ComboBox
+        while (rs.next()) {
+            // Ensure the column name matches the case in the database (roomTypeID)
+            int roomTypeID = rs.getInt("roomTypeID");
+
+            // Convert roomTypeID to String before adding it to the ComboBox
+            roomTypeComboBox.addItem(String.valueOf(roomTypeID));  // Converts int to String
+        }
+    } catch (SQLException ex) {
+        Logger.getLogger(admindashboard.class.getName()).log(Level.SEVERE, null, ex);
+        JOptionPane.showMessageDialog(null, "Error loading room types: " + ex.getMessage());
+    }
+}
+
+
+
+public void setDetails(String reserveID, String in, String out, String status, String amount) {
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd"); // adjust to your date format
     
     try {
         Date checkInDate = sdf.parse(in);
         Date checkOutDate = sdf.parse(out);
-
+        jLabel5.setText(reserveID);
         jTextFieldCheckIn.setDate(checkInDate);
         jTextFieldCheckOut.setDate(checkOutDate);
     } catch (ParseException e) {
@@ -50,42 +102,99 @@ public void setDetails(String in, String out, String status, String amount) {
         jTextFieldCheckOut = new com.toedter.calendar.JDateChooser();
         jTextFieldStatus = new javax.swing.JTextField();
         jTextFieldAmount = new javax.swing.JTextField();
+        jLabel1 = new javax.swing.JLabel();
+        jLabel2 = new javax.swing.JLabel();
+        jLabel3 = new javax.swing.JLabel();
+        roomTypeComboBox = new javax.swing.JComboBox<>();
+        jLabel4 = new javax.swing.JLabel();
+        kButton1 = new com.k33ptoo.components.KButton();
+        jLabel5 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
 
         jPanel1.setBackground(new java.awt.Color(255, 255, 255));
 
+        jTextFieldStatus.setBorder(javax.swing.BorderFactory.createMatteBorder(0, 0, 2, 0, new java.awt.Color(0, 0, 0)));
         jTextFieldStatus.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jTextFieldStatusActionPerformed(evt);
             }
         });
 
+        jTextFieldAmount.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTextFieldAmountActionPerformed(evt);
+            }
+        });
+
+        jLabel1.setText("CheckIn");
+
+        jLabel2.setText("CheckOut");
+
+        jLabel3.setText("Status");
+
+        jLabel4.setText("Amount");
+
+        kButton1.setText("UPDATE");
+        kButton1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                kButton1ActionPerformed(evt);
+            }
+        });
+
+        jLabel5.setText("jLabel5");
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(97, 97, 97)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jTextFieldCheckIn, javax.swing.GroupLayout.DEFAULT_SIZE, 148, Short.MAX_VALUE)
-                    .addComponent(jTextFieldCheckOut, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jTextFieldStatus)
-                    .addComponent(jTextFieldAmount))
-                .addContainerGap(170, Short.MAX_VALUE))
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(97, 97, 97)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel4)
+                            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                .addComponent(jLabel2)
+                                .addComponent(jLabel1)
+                                .addComponent(jTextFieldCheckIn, javax.swing.GroupLayout.DEFAULT_SIZE, 213, Short.MAX_VALUE)
+                                .addComponent(jTextFieldCheckOut, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(jTextFieldStatus)
+                                .addComponent(jLabel3)
+                                .addComponent(jTextFieldAmount)
+                                .addComponent(roomTypeComboBox, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                            .addComponent(jLabel5)))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(113, 113, 113)
+                        .addComponent(kButton1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(140, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(59, 59, 59)
-                .addComponent(jTextFieldCheckIn, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(35, 35, 35)
-                .addComponent(jTextFieldCheckOut, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(14, 14, 14)
+                .addComponent(jLabel5)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jLabel1)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jTextFieldCheckIn, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jLabel2)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jTextFieldCheckOut, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jLabel3)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jTextFieldStatus, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(32, 32, 32)
+                .addComponent(roomTypeComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(20, 20, 20)
+                .addComponent(jLabel4)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jTextFieldAmount, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(jTextFieldStatus, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
-                .addComponent(jTextFieldAmount, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(145, Short.MAX_VALUE))
+                .addComponent(kButton1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(61, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -105,6 +214,112 @@ public void setDetails(String in, String out, String status, String amount) {
     private void jTextFieldStatusActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldStatusActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_jTextFieldStatusActionPerformed
+
+    private void jTextFieldAmountActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldAmountActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jTextFieldAmountActionPerformed
+
+    private void kButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_kButton1ActionPerformed
+        // TODO add your handling code here:
+       String selectedRoomTypeID = (String) roomTypeComboBox.getSelectedItem();
+
+    if ("Select Room Type".equals(selectedRoomTypeID)) {
+        JOptionPane.showMessageDialog(this, "Please select a valid room type.");
+        return;
+    }
+
+    String reservationID = jLabel5.getText();
+    java.util.Date checkInDate = jTextFieldCheckIn.getDate();
+    java.util.Date checkOutDate = jTextFieldCheckOut.getDate();
+
+    if (checkInDate == null || checkOutDate == null) {
+        JOptionPane.showMessageDialog(this, "Please select valid check-in and check-out dates.");
+        return;
+    }
+
+    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+    String checkIn = dateFormat.format(checkInDate);
+    String checkOut = dateFormat.format(checkOutDate);
+
+    try {
+        // Check for conflicts with other reservations
+        String checkQuery = "SELECT * FROM reservations " +
+            "WHERE roomTypeID = ? AND reservationID != ? AND (" +
+            "(? BETWEEN checkIn AND checkOut) OR " +
+            "(? BETWEEN checkIn AND checkOut) OR " +
+            "(checkIn BETWEEN ? AND ?) OR " +
+            "(checkOut BETWEEN ? AND ?))";
+
+        pat = con.prepareStatement(checkQuery);
+        pat.setString(1, selectedRoomTypeID);
+        pat.setString(2, reservationID);  // exclude current reservation
+        pat.setString(3, checkIn);
+        pat.setString(4, checkOut);
+        pat.setString(5, checkIn);
+        pat.setString(6, checkOut);
+        pat.setString(7, checkIn);
+        pat.setString(8, checkOut);
+        ResultSet checkRs = pat.executeQuery();
+
+        if (checkRs.next()) {
+            JOptionPane.showMessageDialog(this, "Another reservation already exists with this room type and date range.");
+            return;
+        }
+
+        // Proceed to get price and update
+        String roomDetailsQuery = "SELECT price FROM roomtypes WHERE roomTypeID = ?";
+        pat = con.prepareStatement(roomDetailsQuery);
+        pat.setString(1, selectedRoomTypeID);
+        ResultSet rs = pat.executeQuery();
+
+        if (rs.next()) {
+            double price = rs.getDouble("price");
+            long diffInMillies = Math.abs(checkOutDate.getTime() - checkInDate.getTime());
+            long diffInDays = TimeUnit.DAYS.convert(diffInMillies, TimeUnit.MILLISECONDS);
+            if (diffInDays == 0) diffInDays = 1;
+            double amount = price * diffInDays;
+
+            // Update reservations
+            String updateReservationQuery = "UPDATE reservations SET roomTypeID = ?, checkIn = ?, checkOut = ? WHERE reservationID = ?";
+            pat = con.prepareStatement(updateReservationQuery);
+            pat.setString(1, selectedRoomTypeID);
+            pat.setString(2, checkIn);
+            pat.setString(3, checkOut);
+            pat.setString(4, reservationID);
+
+            int rowsUpdated = pat.executeUpdate();
+            if (rowsUpdated > 0) {
+                String updateDetailsQuery = "UPDATE reservationdetails SET amount = ? WHERE reservationID = ?";
+                pat = con.prepareStatement(updateDetailsQuery);
+                pat.setDouble(1, amount);
+                pat.setString(2, reservationID);
+                pat.executeUpdate();
+
+                if (admindashboard != null) {
+                    admindashboard.Load_reservation();
+                }
+
+                Window dialog = SwingUtilities.getWindowAncestor(this);
+                if (dialog != null) {
+                    dialog.dispose();
+                }
+
+                JOptionPane.showMessageDialog(this, "Reservation updated successfully!");
+                admindashboard ac = new admindashboard();
+                ac.setVisible(true);
+                dispose();
+            } else {
+                JOptionPane.showMessageDialog(this, "Reservation update failed.");
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, "Room type not found.");
+        }
+
+    } catch (SQLException ex) {
+        Logger.getLogger(admindashboard.class.getName()).log(Level.SEVERE, null, ex);
+        JOptionPane.showMessageDialog(this, "Error updating reservation: " + ex.getMessage());
+    }
+    }//GEN-LAST:event_kButton1ActionPerformed
 
     /**
      * @param args the command line arguments
@@ -149,11 +364,18 @@ public void setDetails(String in, String out, String status, String amount) {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel jLabel5;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JTextField jTextFieldAmount;
     private com.toedter.calendar.JDateChooser jTextFieldCheckIn;
     private com.toedter.calendar.JDateChooser jTextFieldCheckOut;
     private javax.swing.JTextField jTextFieldStatus;
+    private com.k33ptoo.components.KButton kButton1;
+    private javax.swing.JComboBox<String> roomTypeComboBox;
     // End of variables declaration//GEN-END:variables
 
     void setDetails(String reservationID, String reservationNo, String userID, String checkIn, String checkOut, String status, String amount) {

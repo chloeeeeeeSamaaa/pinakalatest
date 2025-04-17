@@ -396,7 +396,7 @@ private String autoID(int UID) {
                     .addGroup(jPanel03Layout.createSequentialGroup()
                         .addGap(310, 310, 310)
                         .addComponent(kButton1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(318, Short.MAX_VALUE))
+                .addContainerGap(306, Short.MAX_VALUE))
         );
         jPanel03Layout.setVerticalGroup(
             jPanel03Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -408,7 +408,7 @@ private String autoID(int UID) {
                 .addGap(18, 18, 18)
                 .addComponent(txtro, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(kButton1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(kButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(121, Short.MAX_VALUE))
         );
 
@@ -540,21 +540,6 @@ private String autoID(int UID) {
     }
 
     try {
-        // Get user details
-        String fname = null, lname = null;
-        pat = con.prepareStatement("SELECT firstName, lastName FROM users WHERE userID = ?");
-        pat.setInt(1, Login.UID);
-        ResultSet rs = pat.executeQuery();
-        if (rs.next()) {
-            fname = rs.getString("firstName");
-            lname = rs.getString("lastName");
-        }
-
-        if (fname == null || lname == null) {
-            JOptionPane.showMessageDialog(this, "User details not found.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
         // Get room and roomType info
         String roomType = null, oc = null;
         double roomAmountPerNight = 0;
@@ -567,7 +552,7 @@ private String autoID(int UID) {
             "WHERE r.roomID = ?"
         );
         pat.setString(1, roomNo);
-        rs = pat.executeQuery();
+        ResultSet rs = pat.executeQuery();
         if (rs.next()) {
             roomTypeID = rs.getInt("roomTypeID");
             roomType = rs.getString("type");
@@ -585,28 +570,30 @@ private String autoID(int UID) {
         long numberOfNights = diffInMillis / (1000 * 60 * 60 * 24);
         double totalAmount = numberOfNights * roomAmountPerNight;
 
-        // Check room availability
+        // Check if the room type is already booked for the selected dates
         pat = con.prepareStatement(
-            "SELECT r.* " +
-            "FROM reservationdetails rd " +
+            "SELECT r.* FROM reservationdetails rd " +
             "JOIN reservations r ON rd.reservationID = r.reservationID " +
-            "WHERE rd.roomID = ? AND ( " +
-            "(? BETWEEN r.checkIn AND r.checkOut) OR " +
-            "(? BETWEEN r.checkIn AND r.checkOut) OR " +
-            "(r.checkIn BETWEEN ? AND ?) OR " +
-            "(r.checkOut BETWEEN ? AND ?) )"
+            "WHERE rd.roomID = ? AND r.roomTypeID = ? AND (" +
+            "(? >= r.checkIn AND ? <= r.checkOut) OR " +  // New check-in date is between existing reservation
+            "(? >= r.checkIn AND ? <= r.checkOut) OR " +  // New check-out date is between existing reservation
+            "(r.checkIn >= ? AND r.checkIn <= ?) OR " +  // Existing check-in date is between new dates
+            "(r.checkOut >= ? AND r.checkOut <= ?))"     // Existing check-out date is between new dates
         );
-        pat.setString(1, roomNo);
-        pat.setString(2, StartDate);
-        pat.setString(3, EndDate);
-        pat.setString(4, StartDate);
-        pat.setString(5, EndDate);
-        pat.setString(6, StartDate);
-        pat.setString(7, EndDate);
+        pat.setString(1, roomNo); // Room selected by the user
+        pat.setInt(2, roomTypeID); // RoomTypeID to ensure only the same room type is checked
+        pat.setString(3, StartDate);  // New check-in date
+        pat.setString(4, EndDate);    // New check-out date
+        pat.setString(5, StartDate);  // New check-in date
+        pat.setString(6, EndDate);    // New check-out date
+        pat.setString(7, StartDate);  // Existing check-in date
+        pat.setString(8, EndDate);    // Existing check-out date
+        pat.setString(9, StartDate);  // Existing check-in date
+        pat.setString(10, EndDate);   // Existing check-out date
 
         rs = pat.executeQuery();
         if (rs.next()) {
-            JOptionPane.showMessageDialog(this, "Room is unavailable for the selected dates.", "Room Unavailable", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "This room type is already booked for the selected dates.", "Booking Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -659,8 +646,6 @@ private String autoID(int UID) {
         Logger.getLogger(clientdashboard.class.getName()).log(Level.SEVERE, null, ex);
         JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
     }
-    
-
     }//GEN-LAST:event_kButton1ActionPerformed
 
     /**
